@@ -30,7 +30,12 @@ export default function AdminLogin() {
       router.push('/admin')
       router.refresh()
     } catch (err: any) {
-      setError(err.message || 'Erro ao fazer login')
+      // Check if error is about missing configuration
+      if (err.message?.includes('Missing Supabase environment variables')) {
+        setError('Configuração do Supabase não encontrada. Verifique as variáveis de ambiente no Vercel.')
+      } else {
+        setError(err.message || 'Erro ao fazer login')
+      }
     } finally {
       setLoading(false)
     }

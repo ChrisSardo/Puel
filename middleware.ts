@@ -29,9 +29,11 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Proteger rotas admin
-  if (request.nextUrl.pathname.startsWith('/admin') && 
-      !request.nextUrl.pathname.startsWith('/admin/login')) {
+  // Proteger rotas admin (exceto login)
+  const pathname = request.nextUrl.pathname
+  const isLoginPage = pathname === '/admin/login' || pathname.startsWith('/admin/login/')
+  
+  if (pathname.startsWith('/admin') && !isLoginPage) {
     const {
       data: { user },
     } = await supabase.auth.getUser()
