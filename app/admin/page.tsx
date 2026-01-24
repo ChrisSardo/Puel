@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { FiPlus, FiEdit, FiTrash2, FiEye } from 'react-icons/fi'
 import AdminProductActions from '@/components/AdminProductActions'
@@ -58,11 +59,15 @@ export default async function AdminPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       {product.images?.[0]?.url && (
-                        <img
-                          src={product.images[0].url}
-                          alt={product.name}
-                          className="h-12 w-12 rounded object-cover mr-4"
-                        />
+                        <div className="relative h-12 w-12 rounded overflow-hidden mr-4 flex-shrink-0">
+                          <Image
+                            src={product.images[0].url}
+                            alt={product.name}
+                            fill
+                            className="object-cover"
+                            sizes="48px"
+                          />
+                        </div>
                       )}
                       <div>
                         <div className="text-sm font-medium text-gray-900">{product.name}</div>
