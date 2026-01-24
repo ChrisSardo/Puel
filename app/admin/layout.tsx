@@ -2,6 +2,9 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import AdminNav from '@/components/AdminNav'
 
+// Force dynamic rendering for admin routes
+export const dynamic = 'force-dynamic'
+
 export default async function AdminLayout({
   children,
 }: {

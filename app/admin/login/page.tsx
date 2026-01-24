@@ -4,6 +4,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 
+// Force dynamic rendering to avoid build-time errors
+export const dynamic = 'force-dynamic'
+
 export default function AdminLogin() {
   const router = useRouter()
   const [email, setEmail] = useState('')
