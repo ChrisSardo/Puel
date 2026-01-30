@@ -33,8 +33,7 @@ export default function AdminLogin() {
     const sessionRes = await supabase.auth.getSession()
     console.log('SESSION AFTER LOGIN:', sessionRes)
 
-    router.push('/admin')
-    router.refresh()
+   router.replace('/admin')
   } catch (err: any) {
     console.error('LOGIN ERROR:', err)
     setError(err.message || 'Erro ao fazer login')
