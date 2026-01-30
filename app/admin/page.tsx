@@ -1,114 +1,111 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
-import { createClient } from '@/lib/supabase/server'
-import { FiPlus, FiEdit, FiTrash2, FiEye } from 'react-icons/fi'
-import AdminProductActions from '@/components/AdminProductActions'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase/client'
+import type { Product } from '@/lib/supabase/types'
 
-export default async function AdminPage() {
-  const supabase = await createClient()
-  
-  const { data: products } = await supabase
-    .from('products')
-    .select(`
-      *,
-      images:product_images(*)
-    `)
-    .order('created_at', { ascending: false })
+export default function AdminDashboard() {
+  const router = useRouter()
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const categoryLabels = {
-    VAREJO: 'Varejo',
-    ATACADO: 'Atacado',
-    UNIFORME: 'Uniformes',
+  const load = async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) setError(error.message)
+    setProducts((data ?? []) as Product[])
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  const logout = async () => {
+    await supabase.auth.signOut()
+    router.replace('/admin/login')
+    router.refresh()
+  }
+
+  const remove = async (id: string) => {
+    if (!confirm('Deletar este produto?')) return
+
+    // apaga imagens do produto
+    const { error: imgErr } = await supabase
+      .from('product_images')
+      .delete()
+      .eq('product_id', id)
+
+    if (imgErr) return setError(imgErr.message)
+
+    // apaga produto
+    const { error: prodErr } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id)
+
+    if (prodErr) return setError(prodErr.message)
+
+    await load()
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Produtos</h1>
-        <Link
-          href="/admin/produtos/novo"
-          className="inline-flex items-center gap-2 bg-primary-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
-        >
-          <FiPlus size={20} />
-          Novo Produto
-        </Link>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Admin - Produtos</h1>
+
+        <div className="flex gap-3">
+          <Link href="/admin/new" className="bg-primary-600 text-white px-4 py-2 rounded-lg">
+            + Novo produto
+          </Link>
+          <button onClick={logout} className="bg-gray-200 px-4 py-2 rounded-lg">
+            Sair
+          </button>
+        </div>
       </div>
 
-      {products && products.length > 0 ? (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">{error}</div>}
+
+      {loading ? (
+        <div>Carregando…</div>
+      ) : products.length === 0 ? (
+        <div className="text-gray-600">Nenhum produto cadastrado.</div>
+      ) : (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Produto
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Categoria
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ações
-                </th>
+                <th className="text-left p-3">Nome</th>
+                <th className="text-left p-3">Categoria</th>
+                <th className="text-left p-3">Ativo</th>
+                <th className="text-right p-3">Ações</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {products.map((product: any) => (
-                <tr key={product.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      {product.images?.[0]?.url && (
-                        <div className="relative h-12 w-12 rounded overflow-hidden mr-4 flex-shrink-0">
-                          <Image
-                            src={product.images[0].url}
-                            alt={product.name}
-                            fill
-                            className="object-cover"
-                            sizes="48px"
-                          />
-                        </div>
-                      )}
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                        <div className="text-sm text-gray-500">{product.slug}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-semibold rounded bg-primary-100 text-primary-800">
-                      {categoryLabels[product.category as keyof typeof categoryLabels]}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 py-1 text-xs font-semibold rounded ${
-                        product.active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {product.active ? 'Ativo' : 'Inativo'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <AdminProductActions product={product} />
+            <tbody>
+              {products.map((p) => (
+                <tr key={p.id} className="border-t">
+                  <td className="p-3">{p.name}</td>
+                  <td className="p-3">{p.category}</td>
+                  <td className="p-3">{p.active ? 'Sim' : 'Não'}</td>
+                  <td className="p-3 text-right space-x-2">
+                    <Link href={`/admin/edit/${p.id}`} className="bg-gray-100 px-3 py-1 rounded">
+                      Editar
+                    </Link>
+                    <button onClick={() => remove(p.id)} className="bg-red-500 text-white px-3 py-1 rounded">
+                      Deletar
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow-md p-8 text-center">
-          <p className="text-gray-500 mb-4">Nenhum produto cadastrado ainda.</p>
-          <Link
-            href="/admin/produtos/novo"
-            className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-semibold"
-          >
-            <FiPlus size={20} />
-            Criar primeiro produto
-          </Link>
         </div>
       )}
     </div>
