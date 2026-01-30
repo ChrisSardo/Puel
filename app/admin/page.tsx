@@ -14,6 +14,8 @@ export default function AdminDashboard() {
 
   const load = async () => {
     setLoading(true)
+    setError('')
+
     const { data, error } = await supabase
       .from('products')
       .select('*')
@@ -36,21 +38,12 @@ export default function AdminDashboard() {
 
   const remove = async (id: string) => {
     if (!confirm('Deletar este produto?')) return
+    setError('')
 
-    // apaga imagens do produto
-    const { error: imgErr } = await supabase
-      .from('product_images')
-      .delete()
-      .eq('product_id', id)
-
+    const { error: imgErr } = await supabase.from('product_images').delete().eq('product_id', id)
     if (imgErr) return setError(imgErr.message)
 
-    // apaga produto
-    const { error: prodErr } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', id)
-
+    const { error: prodErr } = await supabase.from('products').delete().eq('id', id)
     if (prodErr) return setError(prodErr.message)
 
     await load()
@@ -58,7 +51,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Admin - Produtos</h1>
 
         <div className="flex gap-3">

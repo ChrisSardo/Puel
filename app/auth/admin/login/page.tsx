@@ -17,24 +17,13 @@ export default function AdminLoginPage() {
     setError('')
 
     try {
-      const res = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      console.log('LOGIN RESULT:', res)
-
+      const res = await supabase.auth.signInWithPassword({ email, password })
       if (res.error) throw res.error
 
-      // Confirma sessão
-      const sessionRes = await supabase.auth.getSession()
-      console.log('SESSION AFTER LOGIN:', sessionRes)
-
-      // Redireciona para dashboard
+      // garante que o /admin layout vai enxergar a sessão
       router.replace('/admin')
       router.refresh()
     } catch (err: any) {
-      console.error('LOGIN ERROR:', err)
       setError(err.message || 'Erro ao fazer login')
     } finally {
       setLoading(false)
@@ -48,11 +37,8 @@ export default function AdminLoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
-              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -63,11 +49,8 @@ export default function AdminLoginPage() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Senha
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
             <input
-              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
