@@ -15,31 +15,34 @@ export default function AdminLogin() {
   const [error, setError] = useState('')
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+  e.preventDefault()
+  setLoading(true)
+  setError('')
 
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+  try {
+    const res = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
 
-      if (error) throw error
+    console.log('LOGIN RESULT:', res)
 
-      router.push('/admin')
-      router.refresh()
-    } catch (err: any) {
-      // Check if error is about missing configuration
-      if (err.message?.includes('Missing Supabase environment variables')) {
-        setError('Configuração do Supabase não encontrada. Verifique as variáveis de ambiente no Vercel.')
-      } else {
-        setError(err.message || 'Erro ao fazer login')
-      }
-    } finally {
-      setLoading(false)
-    }
+    if (res.error) throw res.error
+
+    // Força checar sessão logo após login
+    const sessionRes = await supabase.auth.getSession()
+    console.log('SESSION AFTER LOGIN:', sessionRes)
+
+    router.push('/admin')
+    router.refresh()
+  } catch (err: any) {
+    console.error('LOGIN ERROR:', err)
+    setError(err.message || 'Erro ao fazer login')
+  } finally {
+    setLoading(false)
   }
+}
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
