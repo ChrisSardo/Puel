@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@/lib/database.types'
+
 
 // Get environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -8,13 +10,16 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build'
 
 // Create client with validation
-let supabaseClient: ReturnType<typeof createClient>
+let supabaseClient: ReturnType<typeof createClient<Database>>
 
-if (supabaseUrl && supabaseAnonKey && 
-    supabaseUrl !== 'https://placeholder.supabase.co' && 
-    supabaseAnonKey !== 'placeholder-key') {
+if (
+  supabaseUrl &&
+  supabaseAnonKey &&
+  supabaseUrl !== 'https://placeholder.supabase.co' &&
+  supabaseAnonKey !== 'placeholder-key'
+) {
   // Valid configuration - create real client
-  supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+  supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: typeof window !== 'undefined',
       autoRefreshToken: typeof window !== 'undefined',
@@ -22,7 +27,7 @@ if (supabaseUrl && supabaseAnonKey &&
   })
 } else if (isBuildTime) {
   // Build time - create placeholder to prevent build errors
-  supabaseClient = createClient(
+  supabaseClient = createClient<Database>(
     'https://placeholder.supabase.co',
     'placeholder-key'
   )

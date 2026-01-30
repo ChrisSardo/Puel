@@ -4,7 +4,14 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { slugify } from '@/lib/utils'
-import { ProductWithImages, ProductCategory } from '@/lib/supabase/types'
+import type { Database } from '@/lib/database.types'
+
+type ProductUpdate = Database['public']['Tables']['products']['Update']
+import type { ProductWithImages, ProductCategory } from '@/lib/supabase/types'
+type ProductInsert = Database['public']['Tables']['products']['Insert']
+type ProductImageInsert = Database['public']['Tables']['product_images']['Insert']
+type ProductImageUpdate = Database['public']['Tables']['product_images']['Update']
+
 import Image from 'next/image'
 import { FiUpload, FiX, FiArrowLeft, FiArrowUp, FiArrowDown } from 'react-icons/fi'
 
@@ -25,7 +32,15 @@ export default function ProductForm({ product }: ProductFormProps) {
     show_price: product?.show_price ?? true,
     active: product?.active ?? true,
   })
-  const [images, setImages] = useState<any[]>(product?.images || [])
+  type UiImage = {
+  id: string
+  url: string
+  position: number
+  isNew?: boolean
+}
+
+const [images, setImages] = useState<UiImage[]>(product?.images || [])
+
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -88,7 +103,7 @@ export default function ProductForm({ product }: ProductFormProps) {
   const removeImage = (index: number) => {
     const image = images[index]
     setImages((prev) => prev.filter((_, i) => i !== index))
-    
+
     // Se não for uma imagem nova, marcar para deletar
     if (!image.isNew && product) {
       // A deleção será feita no backend
@@ -98,7 +113,7 @@ export default function ProductForm({ product }: ProductFormProps) {
   const moveImage = (index: number, direction: 'up' | 'down') => {
     const newImages = [...images]
     const newIndex = direction === 'up' ? index - 1 : index + 1
-    
+
     if (newIndex < 0 || newIndex >= newImages.length) return
 
     const temp = newImages[index]
@@ -120,20 +135,24 @@ export default function ProductForm({ product }: ProductFormProps) {
     try {
       if (product) {
         // Update
+        const updateData: ProductUpdate = {
+          name: formData.name,
+          slug: formData.slug,
+          category: formData.category,
+          description: formData.description ? formData.description : null,
+          price: formData.price ? parseFloat(formData.price) : null,
+          show_price: formData.show_price,
+          active: formData.active,
+          updated_at: new Date().toISOString(),
+        }
+
         const { error: updateError } = await supabase
           .from('products')
-          .update({
-            name: formData.name,
-            slug: formData.slug,
-            category: formData.category,
-            description: formData.description || null,
-            price: formData.price ? parseFloat(formData.price) : null,
-            show_price: formData.show_price,
-            active: formData.active,
-          })
+          .update(updateData)
           .eq('id', product.id)
 
         if (updateError) throw updateError
+
 
         // Update images
         const existingImages = images.filter((img) => !img.isNew)
@@ -150,46 +169,59 @@ export default function ProductForm({ product }: ProductFormProps) {
 
         // Add new images
         for (const img of newImages) {
-          await supabase.from('product_images').insert({
+          const payload: ProductImageInsert = {
             product_id: product.id,
             url: img.url,
             position: img.position,
-          })
+          }
+
+          const { error } = await supabase.from('product_images').insert(payload)
+          if (error) throw error
         }
 
-        // Update positions
+
         for (const img of existingImages) {
-          await supabase
+          const payload: ProductImageUpdate = { position: img.position }
+
+          const { error } = await supabase
             .from('product_images')
-            .update({ position: img.position })
+            .update(payload)
             .eq('id', img.id)
+
+          if (error) throw error
         }
+
       } else {
         // Create
+        const insertData: ProductInsert = {
+          name: formData.name,
+          slug: formData.slug,
+          category: formData.category,
+          description: formData.description ? formData.description : null,
+          price: formData.price ? parseFloat(formData.price) : null,
+          show_price: formData.show_price,
+          active: formData.active,
+        }
+
         const { data: newProduct, error: createError } = await supabase
           .from('products')
-          .insert({
-            name: formData.name,
-            slug: formData.slug,
-            category: formData.category,
-            description: formData.description || null,
-            price: formData.price ? parseFloat(formData.price) : null,
-            show_price: formData.show_price,
-            active: formData.active,
-          })
+          .insert(insertData)
           .select()
           .single()
 
         if (createError) throw createError
+        if (!newProduct) throw new Error('Produto não retornou após criação.')
 
-        // Add images
         for (const img of images) {
-          await supabase.from('product_images').insert({
+          const payload: ProductImageInsert = {
             product_id: newProduct.id,
             url: img.url,
             position: img.position,
-          })
+          }
+          const { error } = await supabase.from('product_images').insert(payload)
+          if (error) throw error
         }
+
       }
 
       router.push('/admin')
